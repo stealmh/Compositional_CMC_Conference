@@ -5,4 +5,10 @@
 //  Created by KindSoft on 2023/06/13.
 //
 
-import Foundation
+import UIKit
+
+class PhotoHeaderCell: UICollectionReusableView {
+    
+    @IBOutlet weak var videoButton: UIButton!
+    @IBOutlet weak var photoButton: UIButton!
+}
