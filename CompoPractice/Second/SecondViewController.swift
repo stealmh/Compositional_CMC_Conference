@@ -40,6 +40,8 @@ class SecondViewController: UIViewController {
     var demoProfileData: ProfileHeaderData {
         return ProfileHeaderData(name: "Planet Pennies", accountType: "News/Entertainment Company", postCount: 482)
     }
+    var mockData: [Photo] = [Photo(image: UIImage(systemName: "house")!)]
+    var mockData2: [ProfileHighlight] = [ProfileHighlight(image: UIImage(systemName: "plus")!)]
     
     lazy var right1Button: UIBarButtonItem = {
         let button = UIBarButtonItem(image: UIImage(systemName: "text.justify")!, style: .plain, target: self, action: #selector(buttonPressed))
@@ -58,13 +60,20 @@ class SecondViewController: UIViewController {
         return button
     }()
     
-    @objc func buttonPressed() {}
+    @objc func buttonPressed() {
+        mockData.append(Photo(image: UIImage(named: "popcat")!))
+//        mockData2.append(ProfileHighlight(image: UIImage(named: "popcat")!))
+        mockData2.insert(ProfileHighlight(image: UIImage(named: "popcat")!), at: 0)
+        dataSource.apply(createSnapshot(), animatingDifferences: true)
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.addSubview(collectionView)
         view.backgroundColor = .gray
+        
         registerCell()
+        configureDataSource()
         
         collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
         collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
@@ -72,8 +81,6 @@ class SecondViewController: UIViewController {
         collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         
         self.navigationItem.rightBarButtonItems = [right1Button, right2Button]
-        
-        configureDataSource()
     }
 }
 
@@ -111,7 +118,7 @@ extension SecondViewController {
     /// 인스타그램의 상단부분 프로필사진 이름 설명이 들어가는 헤더입니다.
     func createHeaderSection() -> NSCollectionLayoutSection {
         let headerItem = NSCollectionLayoutItem(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(1.0)))
-        let headerGroup = NSCollectionLayoutGroup.horizontal(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(0.3)), subitems: [headerItem])
+        let headerGroup = NSCollectionLayoutGroup.horizontal(layoutSize: NSCollectionLayoutSize(widthDimension: .fractionalWidth(1.0), heightDimension: .fractionalHeight(0.2)), subitems: [headerItem])
         return NSCollectionLayoutSection(group: headerGroup)
     }
     
@@ -156,8 +163,8 @@ extension SecondViewController {
         var snapshot = Snapshot()
         snapshot.appendSections([.header, .highlights, .photos])
         snapshot.appendItems([.header(demoProfileData)], toSection: .header)
-        snapshot.appendItems(ProfileHighlight.demoHighlights.map({ MyItem.highlight($0) }), toSection: .highlights)
-        snapshot.appendItems(Photo.demoPhotos.map({ MyItem.photo($0) }), toSection: .photos)
+        snapshot.appendItems(mockData2.map({ MyItem.highlight($0) }), toSection: .highlights)
+        snapshot.appendItems(mockData.map({ MyItem.photo($0) }), toSection: .photos)
 
         return snapshot
     }
@@ -170,9 +177,9 @@ extension SecondViewController {
             cell.configure()
             return cell
             
-        case .highlight:
+        case .highlight(let data):
             let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Story.resuseIdentifier, for: indexPath) as! Story
-            cell.configure(with: UIImage(named: "popcat")!)
+            cell.configure(with: data)
             return cell
             
         case .photo:

@@ -16,10 +16,12 @@ class StoryCell: UICollectionViewCell {
         contentView.backgroundColor = .clear
         contentView.layer.borderColor = UIColor.secondaryLabel.cgColor
         contentView.layer.borderWidth = 1
+        
+        imageView.widthAnchor.constraint(equalTo: imageView.heightAnchor).isActive = true
     }
     
-    func configure(with highlight: UIImage) {
-        imageView.image = highlight
+    func configure(with highlight: ProfileHighlight) {
+        imageView.image = highlight.image
     }
     
     override func layoutSubviews() {
