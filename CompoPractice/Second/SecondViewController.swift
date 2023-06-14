@@ -19,7 +19,8 @@ enum MyItem: Hashable {
     case photo(Photo)
 }
 
-class SecondViewController: UIViewController {
+class SecondViewController: UIViewController, UIScrollViewDelegate {
+    
     
     typealias Header = ProfileHeaderCell
     typealias PhotoHeader = PhotoHeaderCell
@@ -81,6 +82,7 @@ class SecondViewController: UIViewController {
         collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         
         self.navigationItem.rightBarButtonItems = [right1Button, right2Button]
+        collectionView.delegate = self
     }
 }
 
@@ -197,6 +199,24 @@ extension SecondViewController {
         }
         
         dataSource.apply(createSnapshot(), animatingDifferences: true)
+    }
+}
+
+extension SecondViewController: UICollectionViewDelegate {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        guard let item = dataSource.itemIdentifier(for: indexPath) else {
+            print("wrong")
+            return
+            
+        }
+        switch item {
+        case .header(let data):
+            print(data.name)
+        case .highlight(let data):
+            self.present(ViewController(), animated: true)
+        case .photo(let data):
+            print(indexPath.row)
+        }
     }
 }
 
