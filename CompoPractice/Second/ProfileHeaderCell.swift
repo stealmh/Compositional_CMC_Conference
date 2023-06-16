@@ -6,7 +6,7 @@
 //
 
 import UIKit
-
+import Kingfisher
 
 class ProfileHeaderCell: UICollectionViewCell {
     
@@ -15,6 +15,7 @@ class ProfileHeaderCell: UICollectionViewCell {
     @IBOutlet weak var nameLabel: UILabel!
     @IBOutlet weak var accountTypeLabel: UILabel!
     @IBOutlet weak var detailInfoLabel: UILabel!
+    @IBOutlet weak var postCountLabel: UILabel!
     
     override func awakeFromNib() {
         super.awakeFromNib()
@@ -24,11 +25,10 @@ class ProfileHeaderCell: UICollectionViewCell {
         imageView.layer.borderWidth = 1
     }
     
-    func configure() {
-//        imageView.image = UIImage(named: "popcat")!
-//        nameLabel.text = "김민호"
-//        accountTypeLabel.text = "일중"
-//        detailInfoLabel.text = "세상살이"
+    func configure(data: ProfileHeaderData) {
+        imageView.kf.indicatorType = .activity
+        imageView.kf.setImage(with: URL(string: data.image_url))
+        postCountLabel.text = "\(data.postCount)"
     }
 
 }
@@ -37,7 +37,7 @@ class ProfileHeaderCell: UICollectionViewCell {
 #if DEBUG
 import SwiftUI
 
-struct InstagramDMTVCRepresentable: UIViewRepresentable {
+struct ForProfileHeaderCell: UIViewRepresentable {
     typealias UIViewType = ProfileHeaderCell
 
     func makeUIView(context: Context) -> ProfileHeaderCell {
@@ -50,10 +50,10 @@ struct InstagramDMTVCRepresentable: UIViewRepresentable {
 }
 
 @available(iOS 13.0, *)
-struct InstagramDMTVCPreview: PreviewProvider {
+struct ProfileHeaderPreview: PreviewProvider {
     static var previews: some View {
         Group {
-            InstagramDMTVCRepresentable()
+            ForProfileHeaderCell()
                 .frame(width: 393, height: 170)
         }
         .previewLayout(.fixed(width: 393, height: 170))

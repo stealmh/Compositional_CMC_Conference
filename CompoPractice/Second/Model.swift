@@ -7,9 +7,23 @@
 
 import UIKit
 
-struct ProfileHeaderData: Hashable {
+struct Animal: Codable, Hashable {
+    let id = UUID()
     let name: String
-    let accountType: String
+    let quote: String
+    let species: String
+    let image_url: String
+}
+
+extension Animal {
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
+
+struct ProfileHeaderData: Hashable {
+    let id = UUID()
+    let image_url: String
     let postCount: Int
 }
 
@@ -24,6 +38,7 @@ extension ProfileHighlight {
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
+    
 }
 
 extension ProfileHighlight {

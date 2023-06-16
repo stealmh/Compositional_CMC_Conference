@@ -6,29 +6,41 @@
 //
 
 import UIKit
+import RxSwift
+import RxCocoa
+/*
+  ============
+ | header     |
+ |------------|
+ | highlights |
+ |------------|
+ | photos     |
+ |            |
+  ============
+ */
 
 enum Section: Hashable {
     case header
-    case highlights
+    case story
     case photos
 }
 
 enum MyItem: Hashable {
     case header(ProfileHeaderData)
-    case highlight(ProfileHighlight)
-    case photo(Photo)
+    case story(ProfileHighlight)
+    case photo(Animal)
 }
 
-class SecondViewController: UIViewController, UIScrollViewDelegate {
-    
-    
-    typealias Header = ProfileHeaderCell
-    typealias PhotoHeader = PhotoHeaderCell
-    typealias Story = StoryCell
-    typealias Item = CollectionViewCell
-    
-    typealias Datasource = UICollectionViewDiffableDataSource<Section, MyItem>
-    typealias Snapshot = NSDiffableDataSourceSnapshot<Section, MyItem>
+// For Typealias
+typealias Header = ProfileHeaderCell
+typealias Story = StoryCell
+typealias PhotoHeader = PhotoHeaderCell
+typealias PhotoItem = PhotoCell
+
+typealias Datasource = UICollectionViewDiffableDataSource<Section, MyItem>
+typealias Snapshot = NSDiffableDataSourceSnapshot<Section, MyItem>
+
+class SecondViewController: UIViewController {
     
     lazy var collectionView: UICollectionView = {
         let v = UICollectionView(frame: .zero, collectionViewLayout: createLayout())
@@ -39,13 +51,17 @@ class SecondViewController: UIViewController, UIScrollViewDelegate {
     
     private var dataSource: Datasource!
     var demoProfileData: ProfileHeaderData {
-        return ProfileHeaderData(name: "Planet Pennies", accountType: "News/Entertainment Company", postCount: 482)
+        return ProfileHeaderData(image_url: demoPhoto.value.first?.image_url ?? "", postCount: demoPhoto.value.count)
     }
+    let disposeBag = DisposeBag()
+    var myProfile = PublishRelay<ProfileHeaderData>()
+    var demoPhoto = BehaviorRelay<[Animal]>(value: [])
+    
     var mockData: [Photo] = [Photo(image: UIImage(systemName: "house")!)]
     var mockData2: [ProfileHighlight] = [ProfileHighlight(image: UIImage(systemName: "plus")!)]
     
     lazy var right1Button: UIBarButtonItem = {
-        let button = UIBarButtonItem(image: UIImage(systemName: "text.justify")!, style: .plain, target: self, action: #selector(buttonPressed))
+        let button = UIBarButtonItem(image: UIImage(systemName: "text.justify")!, style: .plain, target: self, action: #selector(buttonTappedDelete))
         button.tintColor = .black
         button.width = 10
         button.tag = 1
@@ -60,29 +76,54 @@ class SecondViewController: UIViewController, UIScrollViewDelegate {
         
         return button
     }()
-    
-    @objc func buttonPressed() {
-        mockData.append(Photo(image: UIImage(named: "popcat")!))
-//        mockData2.append(ProfileHighlight(image: UIImage(named: "popcat")!))
-        mockData2.insert(ProfileHighlight(image: UIImage(named: "popcat")!), at: 0)
-        dataSource.apply(createSnapshot(), animatingDifferences: true)
-    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.addSubview(collectionView)
         view.backgroundColor = .gray
+        Task { try await getData1() }
         
+        secondViewLayout()
         registerCell()
         configureDataSource()
         
+        collectionView.delegate = self
+        
+        myProfile.subscribe(onNext: {_ in
+            self.dataSource.apply(self.createSnapshot(), animatingDifferences: true)
+        }).disposed(by: disposeBag)
+        
+        demoPhoto.subscribe(onNext: { value in
+            print(value.count)
+            self.dataSource.apply(self.createSnapshot(), animatingDifferences: true)
+        }).disposed(by: disposeBag)
+    }
+}
+/// Layout + button Action
+private extension SecondViewController {
+    
+    /// 뷰 구성을 위한 컬렉션뷰의 AutoLayout 설정 및 네비게이션 아이템 설정에 관한 함수입니다.
+    func secondViewLayout() {
         collectionView.topAnchor.constraint(equalTo: view.topAnchor).isActive = true
         collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor).isActive = true
         collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor).isActive = true
         collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor).isActive = true
         
         self.navigationItem.rightBarButtonItems = [right1Button, right2Button]
-        collectionView.delegate = self
+    }
+    
+    // Button Actions
+    @objc func buttonPressed() {
+        mockData.append(Photo(image: UIImage(named: "popcat")!))
+        mockData2.insert(ProfileHighlight(image: UIImage(named: "popcat")!), at: 0)
+        dataSource.apply(createSnapshot(), animatingDifferences: true)
+    }
+    
+    @objc func buttonTappedDelete() {
+        if mockData2.count != 1 {
+            mockData2.remove(at: 0)
+            dataSource.apply(createSnapshot(), animatingDifferences: true)
+        }
     }
 }
 
@@ -90,10 +131,12 @@ class SecondViewController: UIViewController, UIScrollViewDelegate {
 extension SecondViewController {
     
     ///CollectionView.register를 위해 셀들을 모아놓은 함수 입니다.
+    /// .self -> Programmatically
+    /// .nib -> Xib
     private func registerCell() {
-        collectionView.register(Item.self, forCellWithReuseIdentifier: Item.identifier)
+        collectionView.register(PhotoItem.self, forCellWithReuseIdentifier: PhotoItem.resuseIdentifier)
         collectionView.register(Header.nib, forCellWithReuseIdentifier: Header.resuseIdentifier)
-        collectionView.register(PhotoHeader.nib, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: "PhotoHeaderCell")
+        collectionView.register(PhotoHeader.nib, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: PhotoHeader.resueIdentifier)
         collectionView.register(Story.nib, forCellWithReuseIdentifier: Story.resuseIdentifier)
     }
     
@@ -110,7 +153,7 @@ extension SecondViewController {
         switch section {
         case .header:
             return createHeaderSection()
-        case .highlights:
+        case .story:
             return createHighlightsSection()
         case .photos:
             return createPhotosSection()
@@ -154,41 +197,6 @@ extension SecondViewController {
         section.boundarySupplementaryItems = [header]
         return section
     }
-    /// Cell의 헤더에 필요함!
-    private func supplementary(collectionView: UICollectionView, kind: String, indexPath: IndexPath) -> UICollectionReusableView {
-        let headerView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: "PhotoHeaderCell", for: indexPath) as! PhotoHeaderCell
-        return headerView
-    }
-    
-    /// For Snapshot
-    private func createSnapshot() -> Snapshot{
-        var snapshot = Snapshot()
-        snapshot.appendSections([.header, .highlights, .photos])
-        snapshot.appendItems([.header(demoProfileData)], toSection: .header)
-        snapshot.appendItems(mockData2.map({ MyItem.highlight($0) }), toSection: .highlights)
-        snapshot.appendItems(mockData.map({ MyItem.photo($0) }), toSection: .photos)
-
-        return snapshot
-    }
-    
-    ///어떠한 Cell을 사용할 것인지 Enum값에 따라 구분지어주는 함수입니다.
-    private func cell(collectionView: UICollectionView, indexPath: IndexPath, item: MyItem) -> UICollectionViewCell{
-        switch item {
-        case .header:
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Header.resuseIdentifier, for: indexPath) as! Header
-            cell.configure()
-            return cell
-            
-        case .highlight(let data):
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Story.resuseIdentifier, for: indexPath) as! Story
-            cell.configure(with: data)
-            return cell
-            
-        case .photo:
-            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Item.identifier, for: indexPath)
-            return cell
-        }
-    }
 
     private func configureDataSource() {
         dataSource = Datasource(collectionView: collectionView) { (collectionView, indexPath, item) -> UICollectionViewCell? in
@@ -200,6 +208,62 @@ extension SecondViewController {
         
         dataSource.apply(createSnapshot(), animatingDifferences: true)
     }
+    
+    ///어떠한 Cell을 사용할 것인지 Enum값에 따라 구분지어주는 함수입니다.
+    private func cell(collectionView: UICollectionView, indexPath: IndexPath, item: MyItem) -> UICollectionViewCell{
+        switch item {
+        case .header(let data):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Header.resuseIdentifier, for: indexPath) as! Header
+            cell.configure(data: demoProfileData)
+            return cell
+            
+        case .story(let data):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Story.resuseIdentifier, for: indexPath) as! Story
+            cell.configure(with: data)
+            return cell
+            
+        case .photo(let data):
+            let cell = collectionView.dequeueReusableCell(withReuseIdentifier: PhotoItem.resuseIdentifier, for: indexPath) as! PhotoItem
+            cell.configure(data: data.image_url)
+            return cell
+        }
+    }
+
+    
+    /// Cell의 헤더에 필요함!
+    private func supplementary(collectionView: UICollectionView, kind: String, indexPath: IndexPath) -> UICollectionReusableView {
+        let headerView = collectionView.dequeueReusableSupplementaryView(ofKind: kind, withReuseIdentifier: PhotoHeader.resueIdentifier, for: indexPath) as! PhotoHeaderCell
+        
+        return headerView
+    }
+    
+    /// For Snapshot
+    private func createSnapshot() -> Snapshot{
+        var snapshot = Snapshot()
+        snapshot.appendSections([.header, .story, .photos])
+        snapshot.appendItems([.header(demoProfileData)], toSection: .header)
+        snapshot.appendItems(mockData2.map({ MyItem.story($0) }), toSection: .story)
+        snapshot.appendItems(demoPhoto.value.map { MyItem.photo($0) }, toSection: .photos)
+
+        return snapshot
+    }
+        
+    func getData1() async throws{
+        let url = URL(string: "https://api.nookipedia.com/villagers")
+        let myKey = "4a59aa18-04df-4cae-9a40-6b97b7a29216"
+        let version = "1.5.0"
+        
+        var request = URLRequest(url:url!)
+        request.httpMethod = "GET"
+        request.setValue(myKey, forHTTPHeaderField: "X-API-KEY")
+        request.setValue(version, forHTTPHeaderField: "Accept-version")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let result = try JSONDecoder().decode([Animal].self, from: data)
+        
+        demoPhoto.accept(Array(result[0...7]))
+//        demoPhoto.accept(result)
+    }
 }
 
 extension SecondViewController: UICollectionViewDelegate {
@@ -210,12 +274,12 @@ extension SecondViewController: UICollectionViewDelegate {
             
         }
         switch item {
-        case .header(let data):
-            print(data.name)
-        case .highlight(let data):
-            self.present(ViewController(), animated: true)
+        case .header:
+            print("")
+        case .story(let data):
+            self.present(UIViewController(), animated: true)
         case .photo(let data):
-            print(indexPath.row)
+            print(data.hashValue)
         }
     }
 }
