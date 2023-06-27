@@ -8,16 +8,14 @@
 import UIKit
 
 extension UICollectionViewCell {
-    static var resuseIdentifier: String {
-        String(describing: Self.self)
-    }
+    static var resuseIdentifier: String { String(describing: Self.self) }
+}
+
+extension UICollectionReusableView {
+    static var resueIdentifier: String { String(describing: Self.self) }
 }
 
 extension UIView {
     static var nibName: String  { String(describing: Self.self) }
     static var nib: UINib { UINib(nibName: nibName, bundle: nil) }
-    
-    static func fromNib<T: UIView>() -> T {
-        return Bundle(for: T.self).loadNibNamed(String(describing: Self.self), owner: nil, options: nil)![0] as! T
-    }
 }

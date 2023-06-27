@@ -7,6 +7,7 @@ target 'CompoPractice' do
   pod 'RxSwift'
   pod 'RxCocoa'
   pod 'SnapKit'
+  pod 'Kingfisher'
 
   # Pods for CompoPractice
 
